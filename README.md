@@ -6,7 +6,7 @@ Browserless interaction tests for Rails apps built with Stimulus, Turbo and impo
 
 Interaction tests written this way can be as much as **4–10x faster** than equivalent Rails system tests, run deterministically, and fail on JavaScript errors. `rails-jsdom` aims to match the API available in system tests that users are already familiar with.
 
-Using a coding agent? Point it at the **[instructions for coding agents](https://jakehow.github.io/rails-jsdom/docs/agents_md.html)** ([source](docs/agents.md)). They cover setting the gem up, writing interaction tests, and converting a system test suite.
+Using a coding agent? Point it at the **[instructions for coding agents](https://jakehow.github.io/rails-jsdom/docs/agents_md.html)**, also published as Markdown at https://jakehow.github.io/rails-jsdom/agents.md. They cover setting the gem up, writing interaction tests, and converting a system test suite.
 
 ```ruby
 class CartInteractionTest < RailsJsdom::TestCase

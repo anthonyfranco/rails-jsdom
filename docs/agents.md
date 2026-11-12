@@ -1,6 +1,6 @@
 # Instructions for coding agents
 
-This page is for an AI coding agent working in a Rails app that uses, or is moving to, `rails-jsdom`. It covers setting the gem up, writing interaction tests, and converting an existing system test suite. The full API reference is at https://jakehow.github.io/rails-jsdom/.
+This page is for an AI coding agent working in a Rails app that uses, or is moving to, `rails-jsdom`. It covers setting the gem up, writing interaction tests, and converting an existing system test suite. The full API reference is at https://jakehow.github.io/rails-jsdom/. This page is also published as Markdown at https://jakehow.github.io/rails-jsdom/agents.md.
 
 ## What rails-jsdom is
 
