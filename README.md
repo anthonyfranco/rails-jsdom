@@ -77,7 +77,7 @@ Layout assertions are brittle in any case; prefer asserting behaviour — what i
 
 These work through the library imitating the browser, so the parts that depend on layout or the platform stay out of reach:
 
-- **Keyboard input.** `send_keys` performs the common browser actions itself: typing and Backspace at the end of a text field, Enter submitting a form or pressing a focused button or link, Space pressing a focused button or checkbox, Tab and Shift+Tab moving focus, and the arrow keys, Home and End stepping a range or number field. Caret movement, text selection, IME input and OS shortcuts are not supported.
+- **Keyboard input.** `send_keys` performs the common browser actions itself: typing and Backspace at the end of a text field, Enter submitting a form or pressing a focused button or link, Space pressing a focused button or checkbox, Tab and Shift+Tab moving focus, the arrow keys, Home and End stepping a range or number field, and Escape cancelling the modal dialog opened last. Caret movement, text selection, IME input and OS shortcuts are not supported.
 - **Several users at once.** `using_session` gives each user their own cookies and page, and Turbo Stream broadcasts reach every page that subscribed. Pages do not run at the same time: a page receives what happened while it was in the background when the test returns to it.
 
 **Not supported yet**

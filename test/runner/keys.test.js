@@ -175,3 +175,32 @@ test("an unknown key or modifier fails", async () => {
   await assert.rejects(type([key("launch")], "#a"), /unknown key launch/)
   await assert.rejects(type([{ text: "a", modifiers: ["hyper"] }], "#a"), /unknown modifier key hyper/)
 })
+
+test("escape cancels and closes the last modal dialog opened, leaving other dialogs open", async () => {
+  await runner.load(`<dialog id="info"></dialog><dialog id="outer"></dialog><dialog id="inner"><input id="a"></dialog><script>
+    window.events = []
+    for (const dialog of document.querySelectorAll("dialog")) for (const type of ["cancel", "close"]) dialog.addEventListener(type, () => events.push(\`\${dialog.id} \${type}\`))
+    info.show(); outer.showModal(); inner.showModal()
+  </script>`)
+  await type([key("escape")], "#a")
+  await type([key("escape")], "#a")
+
+  assert.deepEqual(await read("[events, info.open, outer.open, inner.open]"), [["inner cancel", "inner close", "outer cancel", "outer close"], true, false, false])
+})
+
+test("escape leaves a modal dialog open when its cancel event or the key is prevented", async () => {
+  await runner.load(`<dialog id="d" oncancel="event.preventDefault()"><input id="a"><input id="b" onkeydown="event.preventDefault()"></dialog><dialog id="e"><input id="c"></dialog><script>d.showModal(); e.showModal()</script>`)
+  await type([key("escape")], "#a")
+  await type([key("escape")], "#b")
+  await read("e.close()")
+  await type([key("escape")], "#a")
+
+  assert.deepEqual(await read("[d.open, e.open]"), [true, false])
+})
+
+test("escape with no modal dialog open does nothing", async () => {
+  await runner.load(`<dialog id="d"><input id="a"></dialog><script>d.show()</script>`)
+  await type([key("escape")], "#a")
+
+  assert.equal(await read("d.open"), true)
+})
