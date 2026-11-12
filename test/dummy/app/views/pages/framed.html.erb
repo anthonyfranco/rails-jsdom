@@ -1,5 +1,7 @@
 <% content_for :title, "Framed" %>
 <turbo-frame id="panel">
   <p id="step">Step <%= params.fetch(:step, 1) %></p>
+  <p id="request-headers">Turbo-Frame: <%= request.headers["Turbo-Frame"] %>; Content-Type: <%= request.content_type %></p>
   <%= link_to "Next step", framed_path(step: 2) %>
+  <%= button_to "Save step", framed_path %>
 </turbo-frame>

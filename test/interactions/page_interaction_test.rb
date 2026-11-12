@@ -36,6 +36,14 @@ class PageInteractionTest < RailsJsdom::TestCase
     assert_equal "/framed", current_path
   end
 
+  test "a redirect keeps the request's headers except those describing its body" do
+    visit framed_path
+    click_on "Save step"
+
+    assert_dom "#step", text: "Step 3"
+    assert_dom "#request-headers", text: "Turbo-Frame: panel; Content-Type:"
+  end
+
   test "a page fetch reaches Rails in the test's session" do
     visit login_path
     fill_in "Your name", with: "Ada"

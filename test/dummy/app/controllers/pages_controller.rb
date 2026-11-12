@@ -17,6 +17,10 @@ class PagesController < ApplicationController
   def framed
   end
 
+  def reframe
+    redirect_to framed_path(step: 3)
+  end
+
   def secret
     redirect_to login_path unless signed_in?
   end
