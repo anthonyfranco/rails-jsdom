@@ -6,6 +6,8 @@ Browserless interaction tests for Rails apps built with Stimulus, Turbo and impo
 
 Interaction tests written this way can be as much as **4–10x faster** than equivalent Rails system tests, run deterministically, and fail on JavaScript errors. `rails-jsdom` aims to match the API available in system tests that users are already familiar with.
 
+Using a coding agent? Point it at the **[instructions for coding agents](https://jakehow.github.io/rails-jsdom/docs/agents_md.html)** ([source](docs/agents.md)). They cover setting the gem up, writing interaction tests, and converting a system test suite.
+
 ```ruby
 class CartInteractionTest < RailsJsdom::TestCase
   test "adding an item updates the cart through its Turbo Stream" do
@@ -35,6 +37,7 @@ end
 - [Troubleshooting](#troubleshooting)
 - [Limitations](#limitations)
 - [Development](#development)
+- [Instructions for coding agents](https://jakehow.github.io/rails-jsdom/docs/agents_md.html)
 - [License](#license)
 
 ## How it works
@@ -66,16 +69,24 @@ jsdom implements the DOM and runs JavaScript, but it does not lay out or paint p
 - **CSS media-query breakpoints** — elements shown or hidden only by responsive CSS at a viewport width (for example Tailwind's `md:hidden`). `matchMedia` is stubbed so controllers don't crash, but CSS does not respond to width. Responsive behaviour driven by JavaScript, such as a mobile menu toggle, is still testable.
 - **Theme switching** where the theme only changes CSS.
 - **Screenshots** and other visual evidence.
+- **Drag and drop** — drag-and-drop libraries find the drop target from element positions, which jsdom reports as zero.
 
 Layout assertions are brittle in any case; prefer asserting behaviour — what is in the DOM, what is hidden, what the URL is, what Rails received.
 
-**Not currently supported, but future support or partial support possible**
+**Partly supported**
 
-These are limits of this library, not of jsdom. Support would be an imitation of the browser, so some behaviour stays out of reach:
+These work through the library imitating the browser, so the parts that depend on layout or the platform stay out of reach:
 
-- **Browser default actions for keys** are partly supported. `send_keys` performs the common ones itself: typing and Backspace at the end of a text field, Enter submitting a form, Space and Enter pressing a focused button, Tab and Shift+Tab moving focus, and arrow keys, Home and End stepping a range or number field. Caret movement, text selection, IME input and OS shortcuts depend on layout or the platform and are not supported.
-- **Third-party scripts loaded from a CDN** — remote importmap pins are replaced by empty modules, and `<script src>` tags are not loaded. Pins vendored with `bin/importmap pin --download` are bundled and work. Remote scripts could be downloaded once and cached, but many of them (payment widgets, maps, charts, analytics) need cross-origin iframes, canvas, layout or their vendor's servers, so they would still need stubs.
-- **Custom ActionCable channels** with their own JavaScript consumers. Turbo Stream broadcasts *are* delivered (see below). Custom channels could be supported in-process by giving the page a fake WebSocket that runs the real channel in Ruby; reconnects, pings, concurrent delivery and several clients at once would stay untested.
+- **Keyboard input.** `send_keys` performs the common browser actions itself: typing and Backspace at the end of a text field, Enter submitting a form or pressing a focused button or link, Space pressing a focused button or checkbox, Tab and Shift+Tab moving focus, and the arrow keys, Home and End stepping a range or number field. Caret movement, text selection, IME input and OS shortcuts are not supported.
+- **Several users at once.** `using_session` gives each user their own cookies and page, and Turbo Stream broadcasts reach every page that subscribed. Pages do not run at the same time: a page receives what happened while it was in the background when the test returns to it.
+
+**Not supported yet**
+
+These are limits of this library, not of jsdom, and could be added:
+
+- **Third-party scripts loaded from a CDN.** Remote importmap pins are replaced by empty modules, and `<script src>` tags are not loaded. Pins vendored with `bin/importmap pin --download` are bundled and work. Remote scripts could be downloaded once and cached, but many of them (payment widgets, maps, charts, analytics) need cross-origin iframes, canvas, layout or their vendor's servers, so they would still need stubs.
+- **Custom ActionCable channels** with their own JavaScript consumers. Turbo Stream broadcasts *are* delivered (see below). Custom channels could be supported in-process by giving the page a fake WebSocket that runs the real channel in Ruby; reconnects and pings would stay untested.
+- **iframes and new windows.** Turbo Frames work, but real `<iframe>` content and links that open a new window or tab are not followed. Check such a link with `assert_link` and its `href`, then `visit` it.
 
 **Where the time goes**
 
@@ -270,7 +281,10 @@ Each parallel test worker starts its own Node process the first time it runs an 
 
 ## Limitations
 
-See [what you lose](#trade-offs-compared-with-system-tests). In addition: Stimulus outlets are untested, and pages that depend on browser APIs jsdom does not implement need a small stub in your controller or test.
+See [what you lose](#trade-offs-compared-with-system-tests). In addition:
+
+- jsdom lacks some browser APIs. The runtime stubs the common ones so controllers keep working: `matchMedia` (never matches), `IntersectionObserver` and `ResizeObserver` (never report), `scrollTo` and `scrollIntoView` (do nothing), `navigator.clipboard` (writes are dropped, reads are empty) and `<dialog>` `show`, `showModal` and `close`. A page that needs another missing API needs a small stub in your controller or test.
+- Stimulus outlets are not tested yet.
 
 ## Development
 

@@ -16,8 +16,10 @@ RDoc::Task.new(:rdoc) do |rdoc|
   rdoc.main = "README.md"
   rdoc.markup = "markdown"
   rdoc.rdoc_dir = "doc"
-  rdoc.rdoc_files.include("README.md", "CHANGELOG.md", "LICENSE", "docs/protocol.md", "lib/**/*.rb")
+  rdoc.rdoc_files.include("README.md", "CHANGELOG.md", "LICENSE", "docs/agents.md", "docs/protocol.md", "lib/**/*.rb")
 end
+
+Rake::Task[:rdoc].enhance { cp "docs/llms.txt", "doc/llms.txt" }
 
 desc "Run the Node tests for the runtime and the ESLint rule, holding their coverage at 100%"
 task :test_runner do
