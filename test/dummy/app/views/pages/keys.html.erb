@@ -1,0 +1,42 @@
+<% content_for :title, "Keys" %>
+<h1>Keys</h1>
+
+<form action="/echo" method="get">
+  <label for="query">Query</label>
+  <input id="query" name="query">
+  <button type="submit">Search</button>
+</form>
+
+<form action="/echo" method="get">
+  <label for="only">Only field</label>
+  <input id="only" name="only">
+</form>
+
+<label for="notes">Notes</label>
+<textarea id="notes"></textarea>
+
+<label for="volume">Volume</label>
+<input type="range" id="volume" min="0" max="10" value="5">
+
+<label for="amount">Amount</label>
+<input type="number" id="amount" value="3">
+
+<label for="agree">Agree</label>
+<input type="checkbox" id="agree">
+
+<button type="button" id="press" onclick="this.dataset.pressed = 'yes'">Press me</button>
+
+<label for="first">First</label>
+<input id="first" onchange="this.dataset.changed = 'yes'">
+<label for="second">Second</label>
+<input id="second">
+
+<label for="early">Early</label>
+<input id="early" tabindex="1">
+
+<label for="guarded">Guarded</label>
+<input id="guarded" onkeydown="if (event.key === 'x') event.preventDefault()">
+
+<label for="logged">Logged</label>
+<input id="logged" onkeydown="document.getElementById('key-log').textContent = [event.key, event.code, event.shiftKey, event.ctrlKey].join(' ')">
+<p id="key-log"></p>

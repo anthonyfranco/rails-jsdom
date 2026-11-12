@@ -1,0 +1,6 @@
+<p id="caption"><%= caption %></p>
+<ul id="uploaded">
+  <% files.each do |file| %>
+    <li><%= file.original_filename %> <%= file.content_type %> <%= file.size %> <%= Digest::MD5.hexdigest(file.read) %></li>
+  <% end %>
+</ul>

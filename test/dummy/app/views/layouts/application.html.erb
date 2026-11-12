@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title><%= content_for?(:title) ? yield(:title) : "rails-jsdom dummy" %></title>
+    <%= javascript_importmap_tags %>
+  </head>
+  <body>
+    <nav>
+      <%= link_to "Home", root_path %>
+      <%= link_to "Second page", second_path %>
+    </nav>
+    <%= yield %>
+  </body>
+</html>

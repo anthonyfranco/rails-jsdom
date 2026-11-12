@@ -1,0 +1,25 @@
+<h1>Home</h1>
+<%= link_to "Full reload to second page", second_path, data: { turbo: false } %>
+
+<%= render "shared/counter", start: 2 %>
+
+<section data-controller="greeting">
+  <button type="button" data-action="greeting#load">Load greeting</button>
+  <p data-greeting-target="output"></p>
+</section>
+
+<section data-controller="toggle">
+  <button type="button" data-action="toggle#flip">Toggle details</button>
+  <div data-toggle-target="panel" hidden>Hidden details</div>
+</section>
+
+<%= turbo_stream_from "items" %>
+<ul id="items">
+  <li id="item_1">First item <%= button_to "Remove", item_path(1), method: :delete, form: { data: { turbo_confirm: "Remove the first item?" } } %></li>
+</ul>
+
+<%= form_with url: items_path do |form| %>
+  <%= form.label :name, "Item name" %>
+  <%= form.text_field :name, placeholder: "New item" %>
+  <%= form.submit "Add item" %>
+<% end %>

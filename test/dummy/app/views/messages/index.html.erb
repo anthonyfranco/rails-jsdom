@@ -1,0 +1,10 @@
+<% content_for :title, "Messages" %>
+<p id="signed-in">Signed in as <%= session[:user] || "nobody" %></p>
+<%= turbo_stream_from "messages" %>
+<ul id="messages"></ul>
+
+<%= form_with url: messages_path do |form| %>
+  <%= form.label :body, "Message" %>
+  <%= form.text_field :body %>
+  <%= form.submit "Send" %>
+<% end %>

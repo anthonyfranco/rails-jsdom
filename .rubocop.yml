@@ -1,0 +1,115 @@
+inherit_gem: { rubocop-rails-omakase: rubocop.yml }
+
+plugins:
+  - rubocop-minitest
+
+require:
+  - ./rubocop/cop/readability/no_comments
+  - ./rubocop/cop/readability/no_explicit_return
+  - ./rubocop/cop/readability/no_explicit_nil_return
+  - ./rubocop/cop/readability/strict_unless_predicate
+  - ./rubocop/cop/readability/no_unnecessary_boolean
+  - ./rubocop/cop/readability/no_next_unless
+  - ./rubocop/cop/readability/no_nil_condition_check
+  - ./rubocop/cop/readability/no_nil_ternary_branch
+  - ./rubocop/cop/readability/no_boolean_ternary_branch
+  - ./rubocop/cop/readability/verb_led_bang_method
+
+AllCops:
+  TargetRubyVersion: 3.2
+  NewCops: enable
+  SuggestExtensions: false
+  Exclude:
+    - "coverage/**/*"
+    - "doc/**/*"
+    - "node_modules/**/*"
+    - "test/dummy/tmp/**/*"
+    - "test/runner/fixtures/**/*"
+    - "vendor/**/*"
+
+Readability/NoComments:
+  Enabled: true
+  AllowedLeadingPatterns:
+    - '\A#!'
+    - '\A#\s*(?:frozen_string_literal|encoding|coding|warn_indent|shareable_constant_value):'
+
+Readability/NoExplicitReturn:
+  Enabled: true
+
+Readability/NoExplicitNilReturn:
+  Enabled: true
+
+Readability/StrictUnlessPredicate:
+  Enabled: true
+
+Readability/NoUnnecessaryBoolean:
+  Enabled: true
+
+Readability/NoNextUnless:
+  Enabled: true
+
+Readability/NoNilConditionCheck:
+  Enabled: true
+
+Readability/NoNilTernaryBranch:
+  Enabled: true
+
+Readability/NoBooleanTernaryBranch:
+  Enabled: true
+
+Readability/VerbLedBangMethod:
+  Enabled: true
+
+Lint:
+  Enabled: true
+
+Gemspec:
+  Enabled: true
+
+Naming/BlockForwarding:
+  Enabled: true
+  EnforcedStyle: explicit
+
+Naming/PredicateMethod:
+  Enabled: true
+  Mode: conservative
+
+Naming/PredicatePrefix:
+  Enabled: false
+
+Metrics/MethodLength:
+  Enabled: true
+  Max: 10
+  CountAsOne: [ "array", "hash", "heredoc", "method_call" ]
+
+Metrics/AbcSize:
+  Enabled: true
+  Max: 13
+
+Metrics/CyclomaticComplexity:
+  Enabled: true
+  Max: 5
+
+Metrics/PerceivedComplexity:
+  Enabled: true
+  Max: 5
+
+Metrics/BlockNesting:
+  Enabled: true
+  Max: 1
+
+Style/EndlessMethod:
+  Enabled: true
+  EnforcedStyle: disallow
+
+Style/GuardClause:
+  Enabled: false
+
+Style/NegatedIf:
+  Enabled: false
+
+Style/UnlessElse:
+  Enabled: false
+
+Minitest/MultipleAssertions:
+  Enabled: false

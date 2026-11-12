@@ -1,0 +1,20 @@
+<% content_for :title, "Uploads" %>
+<h1>Uploads</h1>
+
+<%= form_with url: uploads_path, multipart: true do |form| %>
+  <%= form.label :document, "Document" %>
+  <%= form.file_field :document, onchange: "document.getElementById('chosen').textContent = Array.from(this.files, file => file.name).join(', ')" %>
+  <%= form.label :attachments, "Attachments" %>
+  <%= form.file_field :attachments, multiple: true %>
+  <%= form.label :caption, "Caption" %>
+  <%= form.text_field :caption, value: "Holiday" %>
+  <%= form.submit "Upload" %>
+<% end %>
+<p id="chosen"></p>
+<div id="upload-result"></div>
+
+<%= form_with url: uploads_path, multipart: true, data: { turbo: false } do |form| %>
+  <%= form.label :document, "Plain document", for: "plain_document" %>
+  <%= form.file_field :document, id: "plain_document" %>
+  <%= form.submit "Upload without Turbo" %>
+<% end %>

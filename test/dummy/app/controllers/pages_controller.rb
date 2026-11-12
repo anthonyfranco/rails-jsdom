@@ -1,0 +1,32 @@
+class PagesController < ApplicationController
+  def home
+  end
+
+  def second
+  end
+
+  def forms
+  end
+
+  def echo
+  end
+
+  def keys
+  end
+
+  def secret
+    redirect_to login_path unless signed_in?
+  end
+
+  def broken
+    raise "Broken endpoint"
+  end
+
+  def greeting
+    if signed_in?
+      render json: { greeting: "Hello, #{session[:user]}" }
+    else
+      redirect_to login_path
+    end
+  end
+end

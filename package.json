@@ -1,0 +1,14 @@
+{
+  "name": "rails-jsdom-development",
+  "private": true,
+  "description": "Node packages the rails-jsdom test suite needs. Host apps install jsdom and esbuild themselves.",
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "esbuild": "^0.28.2",
+    "eslint": "^10.14.0",
+    "jsdom": "^29.1.1"
+  },
+  "overrides": {
+    "minimatch": "^11.0.8"
+  }
+}

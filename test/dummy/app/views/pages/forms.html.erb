@@ -1,0 +1,57 @@
+<% content_for :title, "Forms" %>
+<h1>Forms</h1>
+
+<%= form_with url: echo_path, method: :get do |form| %>
+  <fieldset id="preferences">
+    <legend>Preferences</legend>
+    <%= form.label :remember, "Remember me" %>
+    <%= form.check_box :remember %>
+    <%= form.label :newsletter, "Newsletter" %>
+    <%= form.check_box :newsletter, checked: true %>
+  </fieldset>
+  <fieldset>
+    <legend>Billing</legend>
+    <%= form.radio_button :plan, "monthly" %>
+    <%= form.label :plan_monthly, "Monthly" %>
+    <%= form.radio_button :plan, "yearly", checked: true %>
+    <%= form.label :plan_yearly, "Yearly" %>
+  </fieldset>
+  <%= form.label :country, "Country" %>
+  <%= form.select :country, [ "Canada", "Mexico" ], selected: "Mexico" %>
+  <%= form.label :colours, "Colours" %>
+  <%= form.select :colours, [ "Red", "Green", "Blue" ], { selected: [ "Red", "Green" ] }, multiple: true %>
+  <%= form.label :nickname, "Nickname" %>
+  <%= form.text_field :nickname, value: "Ace" %>
+  <%= form.label :locked, "Locked" %>
+  <%= form.text_field :locked, value: "fixed", disabled: true %>
+  <%= form.label :bio, "Bio" %>
+  <%= form.text_area :bio %>
+  <%= form.submit "Save preferences" %>
+  <%= form.button "Archive", type: "button", disabled: true %>
+<% end %>
+
+<table id="prices">
+  <caption>Prices</caption>
+  <tr><td>Mug</td><td><button type="button" onclick="this.textContent = 'Chosen'">Choose</button></td></tr>
+</table>
+<table>
+  <caption>Other</caption>
+  <tr><td>Plate</td><td><button type="button">Choose</button></td></tr>
+</table>
+
+<button type="button" onclick="alert('Saved')">Alert me</button>
+<button type="button" onclick="document.getElementById('answer').textContent = String(prompt('Your name?', 'Grace'))">Ask name</button>
+<p id="answer"></p>
+
+<div id="pointer" onmouseenter="this.dataset.hovered = 'yes'" ondblclick="this.dataset.doubled = 'yes'" oncontextmenu="this.dataset.context = 'yes'">Pointer target</div>
+
+<p id="note" hidden>Hidden note</p>
+<details><summary>More</summary><p class="more">Inside details</p></details>
+
+<ul id="cart">
+  <li>Mug <button type="button" onclick="this.closest('li').remove()">Remove</button></li>
+  <li>Plate <button type="button" onclick="this.closest('li').remove()">Remove</button></li>
+  <li hidden>Bowl</li>
+</ul>
+
+<div id="editor" contenteditable="true"></div>
