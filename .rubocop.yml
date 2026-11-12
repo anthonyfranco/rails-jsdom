@@ -16,7 +16,7 @@ require:
   - ./rubocop/cop/readability/verb_led_bang_method
 
 AllCops:
-  TargetRubyVersion: 3.2
+  TargetRubyVersion: 3.3
   NewCops: enable
   SuggestExtensions: false
   Exclude:

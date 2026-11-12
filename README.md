@@ -83,10 +83,12 @@ The esbuild bundle is built once per test worker. Each `visit` then costs a Rail
 
 ## Requirements
 
-- Ruby 3.2+
-- Rails 7.1+ with `importmap-rails`, `propshaft`, `turbo-rails` and `stimulus-rails`
+- Ruby 3.3, 3.4 or 4.0
+- Rails 8.1 with `importmap-rails`, `propshaft`, `turbo-rails` and `stimulus-rails`
 - Stimulus controllers under `app/javascript/controllers`, named `*_controller.js`
 - Node.js supported by jsdom (currently 20.19+, 22.13+ or 24+)
+
+These are the versions CI tests and that issues are fixed for. Ruby 3.2 has reached end of life. Older Rails releases may still work, but they are not tested or supported.
 
 ## Installation
 

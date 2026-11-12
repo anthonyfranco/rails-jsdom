@@ -9,7 +9,7 @@ Gem::Specification.new do |spec|
   spec.description = "rails-jsdom runs your real Rails pages, Stimulus controllers and Turbo in a persistent Node + jsdom process, routing page fetches back into Rails in-process. Interaction tests read like system tests without Capybara, a server or a browser."
   spec.homepage = "https://github.com/jakehow/rails-jsdom"
   spec.license = "MIT"
-  spec.required_ruby_version = ">= 3.2"
+  spec.required_ruby_version = ">= 3.3"
 
   spec.metadata = {
     "homepage_uri" => spec.homepage,

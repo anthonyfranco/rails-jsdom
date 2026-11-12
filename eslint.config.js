@@ -7,7 +7,7 @@ const node = { require: "readonly", module: "writable", __dirname: "readonly", p
 const browser = { window: "readonly", document: "readonly", fetch: "readonly" }
 
 module.exports = [
-  { ignores: ["node_modules/**", "coverage/**", "doc/**", "test/dummy/tmp/**", "test/dummy/log/**", "test/runner/fixtures/app/node_modules/**"] },
+  { ignores: ["node_modules/**", "vendor/**", "coverage/**", "doc/**", "test/dummy/tmp/**", "test/dummy/log/**", "test/runner/fixtures/app/node_modules/**"] },
   js.configs.recommended,
   {
     files: ["**/*.js"],
