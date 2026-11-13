@@ -28,6 +28,14 @@ class PageInteractionTest < RailsJsdom::TestCase
     refute_text "Hidden details"
   end
 
+  test "a link inside a Turbo Frame replaces only that frame" do
+    visit framed_path
+    click_on "Next step"
+
+    assert_dom "#step", text: "Step 2"
+    assert_equal "/framed", current_path
+  end
+
   test "a page fetch reaches Rails in the test's session" do
     visit login_path
     fill_in "Your name", with: "Ada"

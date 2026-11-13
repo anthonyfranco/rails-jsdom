@@ -7,6 +7,7 @@ Rails.application.routes.draw do
   get "forms", to: "pages#forms"
   get "echo", to: "pages#echo"
   get "keys", to: "pages#keys"
+  get "framed", to: "pages#framed"
   resources :uploads, only: %i[new create]
   resources :messages, only: %i[index create]
   get "login", to: "sessions#new"

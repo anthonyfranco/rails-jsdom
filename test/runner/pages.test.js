@@ -102,6 +102,13 @@ test("browser APIs jsdom lacks are stubbed", async () => {
   assert.deepEqual(result, [false, "(min-width: 600px)", false, [], "", "function"])
 })
 
+test("CSS.escape serialises identifiers as browsers do", async () => {
+  await runner.load("<p>Page</p>")
+  const result = await runner.evaluate(`["1a-b c", "-2", "-", "\\0\\u0001\u00e9_x"].map(value => CSS.escape(value))`)
+
+  assert.deepEqual(result, ["\\31 a-b\\ c", "-\\32 ", "\\-", "\uFFFD\\1 \u00e9_x"])
+})
+
 test("timers run in order of time, then of scheduling, up to the horizon", async () => {
   await runner.load("<p>Page</p>")
   await runner.evaluate(`
