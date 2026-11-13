@@ -42,6 +42,22 @@ test("click finds an element by partial text, aria-label, title, id or button va
   assert.deepEqual(await read("hits"), ["partial", "aria", "title", "id", "value"])
 })
 
+test("click finds a button by its name, as system tests do", async () => {
+  await runner.load(`
+    <button name="log_in" onclick="hits.push('button'); return false"><span>Go</span></button>
+    <input type="submit" name="save" value="Keep" onclick="hits.push('input'); return false">
+    <script>window.hits = []</script>`)
+  for (const locator of ["log_in", "save"]) await act("click", locator)
+
+  assert.deepEqual(await read("hits"), ["button", "input"])
+})
+
+test("click does not find a link by its name, as system tests do not", async () => {
+  await runner.load(`<a href="#" name="log_out">Leave</a>`)
+
+  await assert.rejects(act("click", "log_out"), /unable to find "log_out"/)
+})
+
 test("click falls back to a CSS selector, and an invalid selector finds nothing", async () => {
   await runner.load(`<p class="tap" onclick="window.hit = true">Text</p>`)
   await act("click", "p.tap")
@@ -276,4 +292,19 @@ test("an unknown element action fails", async () => {
   await runner.load(`<p>P</p>`)
 
   await assert.rejects(element(await handleOf("p"), "squeeze"), /unknown element action squeeze/)
+})
+
+test("click without a locator clicks the only element of its kind in the scope, or the first with match first", async () => {
+  await runner.load(`<form id="f"><input name="q"><button onclick="hits.push('save'); return false">Save</button></form><p><a href="#a" onclick="hits.push('a')">A</a><a href="#b" onclick="hits.push('b')">B</a></p><script>window.hits = []</script>`)
+  await act("click", null, { kind: "button", scope: [{ css: "#f" }] })
+  await act("click", null, { kind: "link", match: "first" })
+
+  assert.deepEqual(await read("hits"), ["save", "a"])
+})
+
+test("click without a locator fails when nothing, or more than one element, of its kind is in the scope", async () => {
+  await runner.load(`<p><a href="#a">A</a><a href="#b">B</a></p><div id="empty"></div>`)
+
+  await assert.rejects(act("click", null, { kind: "link" }), /any element of that kind matches 2 elements/)
+  await assert.rejects(act("click", null, { kind: null, scope: [{ css: "#empty" }] }), /unable to find any element of that kind/)
 })

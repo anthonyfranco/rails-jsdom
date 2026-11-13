@@ -10,7 +10,6 @@ module RailsJsdom
       prepare_destination
       write "test/test_helper.rb", %(ENV["RAILS_ENV"] ||= "test"\nrequire_relative "../config/environment"\nrequire "rails/test_help"\n)
       write ".gitignore", "/log/*\n"
-      write "config/cable.yml", "test:\n  adapter: test\n"
       Generators::InstallGenerator.any_instance.stubs(:run).with("npm --version", capture: true, verbose: false).returns("11.10.0\n")
     end
 
@@ -39,7 +38,7 @@ module RailsJsdom
       run_generator %w[--skip-npm]
 
       assert_file "package.json" do |package|
-        assert_equal({ "private" => true, "devDependencies" => { "jsdom" => "^29.1.1", "esbuild" => "^0.28.2" } }, JSON.parse(package))
+        assert_equal({ "private" => true, "devDependencies" => { "jsdom" => "^31.0.0", "esbuild" => "^0.28.2" } }, JSON.parse(package))
       end
     end
 
@@ -90,6 +89,16 @@ module RailsJsdom
       assert_match(/npm 10.9.2 ignores min-release-age/, run_generator(%w[--skip-npm]))
     end
 
+    test "reads the npm version when npm warns about the release age setting" do
+      Generators::InstallGenerator.any_instance.stubs(:run).with("npm --version", capture: true, verbose: false).returns("npm warn Unknown project config \"min-release-age\". This will stop working in the next major version of npm.\n11.9.0\n")
+
+      assert_match(/npm 11.9.0 ignores min-release-age/, run_generator(%w[--skip-npm]))
+    end
+
+    test "says nothing about Action Cable's adapter, because each test installs its own" do
+      assert_no_match(/cable|adapter/i, run_generator(%w[--skip-npm]))
+    end
+
     test "says nothing about npm when it holds back new releases" do
       assert_no_match(/ignores min-release-age/, run_generator(%w[--skip-npm]))
     end
@@ -112,28 +121,6 @@ module RailsJsdom
       run_generator %w[--skip-npm]
 
       assert_no_file ".gitignore"
-    end
-
-    test "says nothing about ActionCable when the test environment uses the test adapter" do
-      assert_no_match(/adapter: test/, run_generator(%w[--skip-npm]))
-    end
-
-    test "reads ERB in config/cable.yml" do
-      write "config/cable.yml", "test:\n  adapter: <%= \"test\" %>\n"
-
-      assert_no_match(/adapter: test/, run_generator(%w[--skip-npm]))
-    end
-
-    test "warns when the test environment uses another ActionCable adapter" do
-      write "config/cable.yml", "test:\n  adapter: async\n"
-
-      assert_match(/Set `adapter: test` for the test environment in config\/cable.yml/, run_generator(%w[--skip-npm]))
-    end
-
-    test "warns when the app has no config/cable.yml" do
-      File.delete(File.join(destination_root, "config/cable.yml"))
-
-      assert_match(/Set `adapter: test`/, run_generator(%w[--skip-npm]))
     end
 
     private

@@ -17,12 +17,23 @@ class PagesController < ApplicationController
   def framed
   end
 
+  def styled
+  end
+
   def secret
     redirect_to login_path unless signed_in?
   end
 
   def broken
     raise "Broken endpoint"
+  end
+
+  def body
+    render json: { body: request.raw_post, type: request.content_type }
+  end
+
+  def now
+    render json: { now: Time.now.to_r.to_s }
   end
 
   def greeting

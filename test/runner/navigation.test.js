@@ -67,13 +67,13 @@ test("a new load after going back drops the forward entries", async () => {
 test("each session keeps its own page and history", async () => {
   await runner.load(`<p>Default</p>`)
   await session("other")
-  const empty = await runner.run({ command: "streams" })
+  const empty = await runner.snapshot().then(() => "page", () => "none")
   await runner.load(`<p>Other</p>`, `${HOST}/other`)
   await session("default")
   const defaultPage = await runner.snapshot()
   await session("other")
 
-  assert.deepEqual([empty, defaultPage.text, (await runner.snapshot()).text], [[], "Default", "Other"])
+  assert.deepEqual([empty, defaultPage.text, (await runner.snapshot()).text], ["none", "Default", "Other"])
 })
 
 test("reset leaves only an empty default session", async () => {
@@ -83,4 +83,24 @@ test("reset leaves only an empty default session", async () => {
   await session("other")
 
   await assert.rejects(runner.snapshot(), /visit a page or mount a partial first/)
+})
+
+test("reset clears local and session storage, so nothing leaks into the next test", async () => {
+  await runner.load(`<script>localStorage.setItem("draft", "Hello"); sessionStorage.setItem("tab", "1")</script>`)
+  await runner.run({ command: "reset" })
+  await runner.load(`<p>Next test</p>`)
+
+  assert.deepEqual(await runner.evaluate(`[localStorage.length, sessionStorage.length]`), [0, 0])
+})
+
+test("local and session storage last across page loads in a session, as in one browser tab, and not into another session", async () => {
+  await runner.load(`<script>localStorage.setItem("draft", "Hello"); sessionStorage.setItem("tab", "1")</script>`)
+  await runner.load(`<p>Next</p>`, `${HOST}/next`)
+  const kept = await runner.evaluate(`[localStorage.getItem("draft"), sessionStorage.getItem("tab")]`)
+  await session("other")
+  await runner.load(`<p>Other</p>`)
+  const other = await runner.evaluate(`[localStorage.getItem("draft"), sessionStorage.getItem("tab")]`)
+  await session("default")
+
+  assert.deepEqual([kept, other], [["Hello", "1"], [null, null]])
 })

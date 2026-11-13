@@ -10,6 +10,10 @@ before(() => prepare(runner))
 beforeEach(() => clear(runner))
 
 const read = script => runner.evaluate(script)
+const typeInto = async (keys, selector) => {
+  const [element] = await runner.run({ command: "query", strategy: "css", locator: selector, scope: [] })
+  return runner.run({ command: "element", handle: element.handle, action: "send_keys", keys })
+}
 const type = (keys, selector) => selector ? runner.evaluate(`document.querySelector("${selector}").focus()`).then(() => runner.run({ command: "send_keys", keys })) : runner.run({ command: "send_keys", keys })
 const text = value => ({ text: value })
 const key = (name, modifiers) => modifiers ? { key: name, modifiers } : { key: name }
@@ -174,4 +178,110 @@ test("an unknown key or modifier fails", async () => {
 
   await assert.rejects(type([key("launch")], "#a"), /unknown key launch/)
   await assert.rejects(type([{ text: "a", modifiers: ["hyper"] }], "#a"), /unknown modifier key hyper/)
+})
+
+const EDITABLE_EVENTS = `<script>
+  window.events = []
+  for (const type of ["beforeinput", "input"]) document.addEventListener(type, event => events.push([type, event.inputType, event.data].join(" ")))
+</script>`
+
+test("typing into a contenteditable puts the caret at the end, then inserts each character as a browser does", async () => {
+  await runner.load(`<div id="e" contenteditable="true"><p>Hel</p></div>${EDITABLE_EVENTS}`)
+  await typeInto([text("lo")], "#e")
+
+  assert.deepEqual([await read("e.innerHTML"), await read("events")], ["<p>Hello</p>", ["beforeinput insertText l", "input insertText l", "beforeinput insertText o", "input insertText o"]])
+})
+
+test("typing into a focused contenteditable keeps the caret where it is", async () => {
+  await runner.load(`<div id="e" contenteditable>ac</div>`)
+  await read("e.focus(); getSelection().collapse(e.firstChild, 1); true")
+  await typeInto([text("b")], "#e")
+
+  assert.equal(await read("e.textContent"), "abc")
+})
+
+test("typing into an empty contenteditable creates its text", async () => {
+  await runner.load(`<div id="e" contenteditable></div>`)
+  await typeInto([text("Hi")], "#e")
+
+  assert.equal(await read("e.innerHTML"), "Hi")
+})
+
+test("backspace in a contenteditable deletes before the caret, and nothing at its start", async () => {
+  await runner.load(`<div id="e" contenteditable>ab</div>`)
+  await typeInto([key("backspace"), key("backspace"), key("backspace")], "#e")
+
+  assert.equal(await read("e.innerHTML"), "")
+})
+
+test("enter and shift+enter in a contenteditable insert a break, with the paragraph or line break input type", async () => {
+  await runner.load(`<div id="e" contenteditable>a</div>${EDITABLE_EVENTS}`)
+  await typeInto([key("enter"), key("enter", ["shift"])], "#e")
+
+  assert.deepEqual([await read("e.innerHTML"), await read("events.filter(event => event.startsWith('input'))")], ["a<br><br>", ["input insertParagraph ", "input insertLineBreak "]])
+})
+
+test("backspace after typing past a break in a contenteditable deletes the last character typed", async () => {
+  await runner.load(`<div id="e" contenteditable>a</div>`)
+  await typeInto([key("enter"), text("xy"), key("backspace")], "#e")
+
+  assert.equal(await read("e.innerHTML"), "a<br>x")
+})
+
+test("backspace in a contenteditable deletes a break before the caret, then the text before it", async () => {
+  await runner.load(`<div id="e" contenteditable>ab</div>`)
+  await typeInto([key("enter"), key("backspace"), key("backspace")], "#e")
+
+  assert.equal(await read("e.innerHTML"), "a")
+})
+
+test("backspace in a contenteditable removes an empty text node before the caret", async () => {
+  await runner.load(`<div id="e" contenteditable>a</div>`)
+  await read(`e.append(""); e.focus(); getSelection().collapse(e, 2); true`)
+  await runner.run({ command: "send_keys", keys: [key("backspace")] })
+
+  assert.deepEqual([await read("e.childNodes.length"), await read("e.textContent")], [1, "a"])
+})
+
+test("an editor that cancels beforeinput keeps the content, and no input event fires", async () => {
+  await runner.load(`<div id="e" contenteditable>a</div>${EDITABLE_EVENTS}<script>e.addEventListener("beforeinput", event => event.preventDefault())</script>`)
+  await typeInto([text("b")], "#e")
+
+  assert.deepEqual([await read("e.textContent"), await read("events")], ["a", ["beforeinput insertText b"]])
+})
+
+test("a held control key or a key without an edit types nothing into a contenteditable", async () => {
+  await runner.load(`<div id="e" contenteditable>a</div>${EDITABLE_EVENTS}`)
+  await typeInto([{ text: "b", modifiers: ["control"] }, key("up")], "#e")
+
+  assert.deepEqual([await read("e.textContent"), await read("events")], ["a", []])
+})
+
+test("an element inside a contenteditable is editable, and contenteditable=false inside it is not", async () => {
+  await runner.load(`<div id="e" contenteditable><span id="s">a</span><span id="off" contenteditable="false" tabindex="0"><b id="b">x</b></span></div>`)
+  await typeInto([text("c")], "#off")
+
+  assert.deepEqual([await read("e.textContent"), await read("[e.isContentEditable, s.isContentEditable, off.isContentEditable, b.isContentEditable]")], ["ax", [true, true, false, false]])
+})
+
+test("tasks queued while a key is handled run before the next key, as between real keystrokes", async () => {
+  await runner.load(`<input id="a"><script>window.events = []; a.addEventListener("keydown", event => { events.push(event.key); Promise.resolve().then(() => setTimeout(() => events.push("task " + event.key), 0)) })</script>`)
+  await type([text("ab")], "#a")
+
+  assert.deepEqual(await read("events"), ["a", "task a", "b", "task b"])
+})
+
+test("keys sent to a focused contenteditable whose selection is elsewhere type at its end", async () => {
+  await runner.load(`<p id="p">Elsewhere</p><div id="e" contenteditable>ab</div>`)
+  await read("e.focus(); getSelection().collapse(p.firstChild, 2); true")
+  await runner.run({ command: "send_keys", keys: [text("c")] })
+
+  assert.deepEqual([await read("e.textContent"), await read("p.textContent")], ["abc", "Elsewhere"])
+})
+
+test("Selenium's names for the arrow keys and return work as in system tests", async () => {
+  await runner.load(`<input id="a"><script>window.keys = []; a.addEventListener("keydown", event => keys.push(event.key))</script>`)
+  await type([key("arrow_left"), key("arrow_right"), key("arrow_up"), key("arrow_down"), key("return")], "#a")
+
+  assert.deepEqual(await read("keys"), ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Enter"])
 })

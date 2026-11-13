@@ -1,6 +1,4 @@
-require "erb"
 require "json"
-require "yaml"
 require "rails/generators"
 
 module RailsJsdom
@@ -15,7 +13,7 @@ module RailsJsdom
     class InstallGenerator < Rails::Generators::Base
       # The Node packages the app needs. Each range allows newer minor and patch
       # releases but never a new major version.
-      PACKAGES = { "jsdom" => "^29.1.1", "esbuild" => "^0.28.2" }.freeze
+      PACKAGES = { "jsdom" => "^31.0.0", "esbuild" => "^0.28.2" }.freeze
 
       # How many days old a package version must be before npm installs it.
       RELEASE_AGE_DAYS = 7
@@ -70,12 +68,6 @@ module RailsJsdom
         append_to_file ".gitignore", "\n/node_modules\n" if File.exist?(gitignore) && !File.read(gitignore).include?("node_modules")
       end
 
-      # Warns when the test environment does not use the ActionCable `test`
-      # adapter, which Turbo Stream broadcasts need.
-      def check_cable_adapter
-        say_status :warning, "Set `adapter: test` for the test environment in config/cable.yml so pages receive Turbo Stream broadcasts", :yellow unless test_cable_adapter?
-      end
-
       private
 
       def npm_settings
@@ -84,20 +76,11 @@ module RailsJsdom
       end
 
       def npm_version
-        @npm_version ||= Gem::Version.new(run("npm --version", capture: true, verbose: false).to_s.strip)
+        @npm_version ||= Gem::Version.new(run("npm --version", capture: true, verbose: false).to_s.lines.map(&:strip).grep(/\A\d+(\.\d+)+\z/).last)
       end
 
       def existing_package
         JSON.parse(File.read(path("package.json"))) if File.exist?(path("package.json"))
-      end
-
-      def test_cable_adapter?
-        cable = path("config/cable.yml")
-        File.exist?(cable) && cable_config(cable).dig("test", "adapter") == "test"
-      end
-
-      def cable_config(file)
-        YAML.safe_load(ERB.new(File.read(file)).result, aliases: true)
       end
 
       def path(relative)

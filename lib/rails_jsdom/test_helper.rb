@@ -86,12 +86,12 @@ module RailsJsdom
     # Goes back one history entry: a Turbo Drive visit or a full page load.
     # Does nothing on the first page.
     def go_back
-      rails_jsdom_perform(command: "traverse", delta: -1)
+      rails_jsdom_call(command: "traverse", delta: -1)
     end
 
     # Goes forward one history entry after #go_back.
     def go_forward
-      rails_jsdom_perform(command: "traverse", delta: 1)
+      rails_jsdom_call(command: "traverse", delta: 1)
     end
 
     # Runs the block as another user, with its own cookies and its own page.
@@ -121,7 +121,7 @@ module RailsJsdom
     #
     #   mount_html %(<div data-controller="counter"></div>)
     def mount_html(html)
-      rails_jsdom_perform(command: "load", html: RailsJsdom.document(html), url: "http://#{host}/", history: "push")
+      rails_jsdom_call(command: "load", html: RailsJsdom.document(html), url: "http://#{host}/", history: "push")
     end
 
     # Answers the page's requests to `url` with the given response instead of
@@ -131,6 +131,18 @@ module RailsJsdom
     #   stub_fetch "/api/agents", body: [].to_json
     def stub_fetch(url, body: "", status: 200, headers: { "content-type" => "application/json" })
       RailsJsdom.bridge.call(command: "stub_fetch", url: url, response: { status: status, headers: headers, body: body })
+    end
+
+    # Gives elements matching `selector`, anything inside them, and text ranges
+    # that start inside them the box `width` by `height` at `left`, `top`,
+    # instead of the 0x0 box at 0,0 that jsdom gives everything, until the next
+    # page load. For a test whose page waits for a real measurement, such as an
+    # editor that positions a menu at the caret, when where things are does not
+    # matter to the test. Call it after the page is loaded.
+    #
+    #   stub_layout "#composer .lexxy-editor__content"
+    def stub_layout(selector, width: 100, height: 20, top: 10, left: 10)
+      RailsJsdom.bridge.call(command: "stub_layout", selector: selector, box: { width: width, height: height, top: top, left: left })
     end
 
     # The page: an object with every helper in this module, plus
@@ -150,7 +162,7 @@ module RailsJsdom
     # Clicks the link or button found by `locator`.
     #
     #   click_on "Add to cart"
-    def click_on(locator, match: nil)
+    def click_on(locator = nil, match: nil)
       rails_jsdom_act("click", locator, match, kind: "link_or_button")
     end
     alias_method :click_link_or_button, :click_on
@@ -158,14 +170,14 @@ module RailsJsdom
     # Clicks the link found by `locator`.
     #
     #   click_link "Second page"
-    def click_link(locator, match: nil)
+    def click_link(locator = nil, match: nil)
       rails_jsdom_act("click", locator, match, kind: "link")
     end
 
     # Clicks the button found by `locator`.
     #
     #   click_button "Save"
-    def click_button(locator, match: nil)
+    def click_button(locator = nil, match: nil)
       rails_jsdom_act("click", locator, match, kind: "button")
     end
 
@@ -222,14 +234,14 @@ module RailsJsdom
     #
     #   select "Canada", from: "Country"
     def select(value, from: nil, match: nil)
-      rails_jsdom_perform(command: "select", option: value.to_s, from: from, selected: true, scope: rails_jsdom_scope, match: match)
+      rails_jsdom_call(command: "select", option: value.to_s, from: from, selected: true, scope: rails_jsdom_scope, match: match)
     end
 
     # Deselects the option `value` in a select that allows multiple options.
     #
     #   unselect "Red", from: "Colours"
     def unselect(value, from: nil, match: nil)
-      rails_jsdom_perform(command: "select", option: value.to_s, from: from, selected: false, scope: rails_jsdom_scope, match: match)
+      rails_jsdom_call(command: "select", option: value.to_s, from: from, selected: false, scope: rails_jsdom_scope, match: match)
     end
 
     # Puts the files at `paths` (one path or an array) in the file field found
@@ -239,9 +251,22 @@ module RailsJsdom
     # `ActionDispatch::Http::UploadedFile` params.
     #
     #   attach_file "Avatar", file_fixture("avatar.png")
-    def attach_file(locator, paths, match: nil)
-      files = Array(paths).map { |path| { name: File.basename(path), type: Rack::Mime.mime_type(File.extname(path.to_s)), base64: [ File.binread(path) ].pack("m0") } }
-      rails_jsdom_act("attach", locator, match, files: files)
+    #
+    # With a block, `attach_file` takes only the paths, and puts them in the
+    # file field that the block opens a file chooser for, as when a script
+    # calls `click()` on a file field it created. The field need not be on
+    # the page. Raises RailsJsdom::Error if the block opened no file chooser.
+    #
+    #   attach_file(file_fixture("avatar.png")) { click_on "Upload" }
+    def attach_file(locator, paths = nil, match: nil, **options)
+      RailsJsdom.reject_options(options.keys)
+      if block_given?
+        RailsJsdom.bridge.call(command: "expect_file_chooser", files: rails_jsdom_files(locator))
+        yield
+        RailsJsdom.bridge.call(command: "file_chooser_opened") || raise(Error, "No file chooser opened in the attach_file block")
+      else
+        rails_jsdom_act("attach", locator, match, files: rails_jsdom_files(paths))
+      end
     end
 
     # Types `keys` into the focused element. A String types its characters; a
@@ -262,7 +287,7 @@ module RailsJsdom
     #   find_field("Search").send_keys("mugs", :enter)
     #   send_keys [ :shift, :tab ]
     def send_keys(*keys)
-      rails_jsdom_perform(command: "send_keys", keys: RailsJsdom.keys(keys))
+      rails_jsdom_call(command: "send_keys", keys: RailsJsdom.keys(keys))
     end
 
     # Scopes every action, finder and assertion in the block to the one
@@ -292,8 +317,8 @@ module RailsJsdom
     # `match: :first`.
     #
     #   find(".cart-item", text: "Mug").click
-    def find(selector, match: nil, **filters)
-      rails_jsdom_find(Query.new("css", selector, **filters), match)
+    def find(selector = nil, match: nil, **filters)
+      rails_jsdom_find(Query.new("css", selector || "*", **filters), match)
     end
 
     # The one field found by `locator` (see Locators) that matches the
@@ -318,27 +343,29 @@ module RailsJsdom
     # none.
     #
     #   all(".cart-item").map(&:text)
-    def all(selector, **filters)
-      rails_jsdom_elements(Query.new("css", selector, **filters))
+    def all(selector = nil, **filters)
+      rails_jsdom_elements(Query.new("css", selector || "*", **filters))
     end
 
     # The first element that matches the CSS `selector` and the filters.
     # Raises RailsJsdom::Error when none matches.
-    def first(selector, **filters)
-      rails_jsdom_find(Query.new("css", selector, **filters), :first)
+    def first(selector = nil, **filters)
+      rails_jsdom_find(Query.new("css", selector || "*", **filters), :first)
     end
 
     # Runs `script` in the page, settles it and returns the script's value,
     # awaited if it is a promise. The value must be JSON-serialisable.
     #
     #   evaluate_script("document.title") # => "Projects"
-    def evaluate_script(script)
-      rails_jsdom_perform(command: "evaluate", script: script)
+    def evaluate_script(script, *arguments)
+      rails_jsdom_script(script, arguments, "expression")
     end
 
-    # Runs `script` in the page and settles it, returning nothing.
-    def execute_script(script)
-      evaluate_script(script)
+    # Runs `script` in the page and settles it, returning nothing. As in
+    # system tests, extra arguments are available to the script as
+    # `arguments`; an element from `find` arrives as that DOM element.
+    def execute_script(script, *arguments)
+      rails_jsdom_script(script, arguments, "statements")
       nil
     end
 
@@ -604,25 +631,67 @@ module RailsJsdom
       rails_jsdom_scope.empty? ? Nokogiri::HTML5(html).root : Nokogiri::HTML5.fragment(html, context: "template").element_children.first
     end
 
+    def rails_jsdom_script(script, arguments, kind, receiver = nil) # :nodoc:
+      if arguments.empty? && receiver.nil?
+        rails_jsdom_call(command: "evaluate", script: script)
+      else
+        rails_jsdom_call(command: "evaluate", script: script, kind: kind, receiver: receiver, args: arguments.map { |argument| rails_jsdom_script_value(argument) })
+      end
+    end
+
+    def rails_jsdom_script_value(argument) # :nodoc:
+      argument.is_a?(Element) ? { rails_jsdom_element: argument.handle } : argument
+    end
+
     def rails_jsdom_element(handle, action, **options) # :nodoc:
-      rails_jsdom_perform(command: "element", handle: handle, action: action, **options)
+      rails_jsdom_call(command: "element", handle: handle, action: action, **options)
     end
 
     def rails_jsdom_read(handle) # :nodoc:
-      rails_jsdom_deliver_broadcasts
+      rails_jsdom_catch_up
       RailsJsdom.bridge.call(command: "read", handle: handle)
     end
 
     def rails_jsdom_page_snapshot # :nodoc:
-      rails_jsdom_deliver_broadcasts
+      rails_jsdom_catch_up
       RailsJsdom.bridge.call(command: "snapshot", scope: [])
+    end
+
+    def rails_jsdom_answer(request) # :nodoc:
+      request["kind"] == "cable" ? rails_jsdom_cable_answer(request) : rails_jsdom_http_answer(request)
+    end
+
+    def rails_jsdom_sync # :nodoc:
+      rails_jsdom_clock.view.merge(frames: rails_jsdom_cable.drain)
+    end
+
+    def rails_jsdom_page_clock(now) # :nodoc:
+      rails_jsdom_clock.page_time(now)
+    end
+
+    def rails_jsdom_clock # :nodoc:
+      @rails_jsdom_clock ||= Clock.new(Time.now) { |time| travel_to(time, with_usec: true) }
+    end
+
+    def rails_jsdom_take_over_pubsub # :nodoc:
+      @rails_jsdom_previous_pubsub = ActionCable.server.pubsub
+      @rails_jsdom_pubsub = CableAdapter.new(ActionCable.server)
+      ActionCable.server.instance_variable_set(:@pubsub, @rails_jsdom_pubsub)
+    end
+
+    def rails_jsdom_restore_pubsub # :nodoc:
+      ActionCable.server.instance_variable_set(:@pubsub, @rails_jsdom_previous_pubsub)
+    end
+
+    def rails_jsdom_close_cables # :nodoc:
+      (@rails_jsdom_cables || {}).each_value(&:close)
     end
 
     private
 
     def rails_jsdom_visit(path, history)
       rails_jsdom_request("GET", path, headers: {})
-      rails_jsdom_perform(command: "load", html: response.body, url: request.url, history: history)
+      rails_jsdom_call(command: "load", html: response.body, url: request.original_url, history: history)
     end
 
     def rails_jsdom_session_name
@@ -650,7 +719,11 @@ module RailsJsdom
     end
 
     def rails_jsdom_act(command, locator, match, **options)
-      rails_jsdom_perform(command: command, locator: locator, scope: rails_jsdom_scope, match: match, **options)
+      rails_jsdom_call(command: command, locator: locator, scope: rails_jsdom_scope, match: match, **options)
+    end
+
+    def rails_jsdom_files(paths)
+      Array(paths).map { |path| { name: File.basename(path), type: Rack::Mime.mime_type(File.extname(path.to_s)), base64: [ File.binread(path) ].pack("m0") } }
     end
 
     def rails_jsdom_modal(type, accept, text, with: nil)
@@ -661,7 +734,7 @@ module RailsJsdom
     end
 
     def rails_jsdom_matches(query)
-      rails_jsdom_deliver_broadcasts
+      rails_jsdom_catch_up
       query.filter(RailsJsdom.bridge.call(**query.message, scope: rails_jsdom_scope))
     end
 
@@ -706,37 +779,41 @@ module RailsJsdom
     end
 
     def rails_jsdom_snapshot
-      rails_jsdom_deliver_broadcasts
+      rails_jsdom_catch_up
       RailsJsdom.bridge.call(command: "snapshot", scope: rails_jsdom_scope)
     end
 
-    def rails_jsdom_deliver_broadcasts
-      messages = rails_jsdom_undelivered_broadcasts
-      if messages.any?
-        rails_jsdom_call(command: "deliver", messages: messages)
-        rails_jsdom_deliver_broadcasts
+    def rails_jsdom_cable_answer(request)
+      uri = URI(request.fetch("url", "ws://#{host}"))
+      uri.host == host ? rails_jsdom_cable.answer(request, rails_jsdom_cookie(uri)) : { error: "RailsJsdom opens cable connections only to #{host}, not to #{uri}." }
+    end
+
+    def rails_jsdom_cookie(uri)
+      integration_session.cookies.for(URI("http://#{host}#{uri.path}"))
+    end
+
+    def rails_jsdom_catch_up
+      if rails_jsdom_cable.active?
+        rails_jsdom_call(command: "settle")
+      elsif rails_jsdom_clock.moved? || rails_jsdom_cable_failed?
+        rails_jsdom_call(command: "catch_up")
       end
     end
 
-    def rails_jsdom_undelivered_broadcasts
-      streams = RailsJsdom.bridge.call(command: "streams").filter_map { |name| Turbo::StreamsChannel.verified_stream_name(name) }.uniq
-      rails_jsdom_deliveries.undelivered_messages(rails_jsdom_session_name, streams)
+    def rails_jsdom_cable_failed?
+      !!@rails_jsdom_pubsub&.failed?
     end
 
-    def rails_jsdom_deliveries
-      @rails_jsdom_deliveries ||= TurboStreamDeliveries.new
-    end
-
-    def rails_jsdom_perform(**message)
-      rails_jsdom_deliver_broadcasts
-      rails_jsdom_call(message).tap { rails_jsdom_deliver_broadcasts }
+    def rails_jsdom_cable
+      (@rails_jsdom_cables ||= {})[rails_jsdom_session_name] ||= Cable.new(rails_jsdom_clock)
     end
 
     def rails_jsdom_call(message)
-      RailsJsdom.bridge.call(message) { |fetch| rails_jsdom_fetch(fetch) }
+      @rails_jsdom_pubsub&.raise_failure
+      RailsJsdom.bridge.call(message, self)
     end
 
-    def rails_jsdom_fetch(fetch)
+    def rails_jsdom_http_answer(fetch)
       uri = URI(fetch.fetch("url"))
       if uri.host == host
         redirected = rails_jsdom_request(fetch.fetch("method"), uri.request_uri, params: fetch["body"]&.unpack1("m"), headers: fetch.fetch("headers"))
@@ -747,7 +824,7 @@ module RailsJsdom
     end
 
     def rails_jsdom_fetch_reply(redirected)
-      { status: response.status, headers: response.headers.to_h.except("set-cookie"), body: response.body, url: request.url, redirected: redirected }
+      { status: response.status, headers: response.headers.to_h.except("set-cookie"), body: response.body, url: request.original_url, redirected: redirected }
     end
 
     def rails_jsdom_request(method, path, headers:, params: nil)

@@ -3,11 +3,14 @@ Rails.application.routes.draw do
   get "second", to: "pages#second"
   get "secret", to: "pages#secret"
   get "greeting", to: "pages#greeting"
+  get "now", to: "pages#now"
   get "broken", to: "pages#broken"
   get "forms", to: "pages#forms"
   get "echo", to: "pages#echo"
   get "keys", to: "pages#keys"
   get "framed", to: "pages#framed"
+  get "styled", to: "pages#styled"
+  put "body", to: "pages#body"
   resources :uploads, only: %i[new create]
   resources :messages, only: %i[index create]
   get "login", to: "sessions#new"

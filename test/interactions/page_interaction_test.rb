@@ -7,6 +7,26 @@ class PageInteractionTest < RailsJsdom::TestCase
     assert_dom "[data-counter-target=count]", text: "2"
   end
 
+  test "a visited page keeps the URL that was visited when middleware moves part of the path into the script name" do
+    visit "/123"
+
+    assert_equal "http://www.example.com/123", current_url
+  end
+
+  test "a full page load keeps the URL of the link when middleware moves part of the path into the script name" do
+    visit second_path
+    click_on "Full reload to a prefixed page"
+
+    assert_equal "http://www.example.com/123", current_url
+  end
+
+  test "a Turbo Drive visit to a page with new head styles renders the page" do
+    visit second_path
+    click_link "Styled page"
+
+    assert_selector "h1", text: "Styled page"
+  end
+
   test "clicking a Stimulus action updates its targets" do
     visit root_path
     click "Increment"
@@ -34,6 +54,17 @@ class PageInteractionTest < RailsJsdom::TestCase
 
     assert_dom "#step", text: "Step 2"
     assert_dom "#outside", text: "Outside 1"
+  end
+
+  test "a page in an endless loop fails the command, and the next page works in a new process" do
+    RailsJsdom.command_timeout = 2
+    visit login_path
+    error = assert_raises(RailsJsdom::Error) { execute_script("while (true) {}") }
+    visit login_path
+
+    assert_equal [ true, true ], [ error.message.include?("did not answer within 2 seconds"), has_field?("Your name") ]
+  ensure
+    RailsJsdom.command_timeout = nil
   end
 
   test "a page fetch reaches Rails in the test's session" do

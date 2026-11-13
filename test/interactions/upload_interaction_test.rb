@@ -12,6 +12,21 @@ class UploadInteractionTest < RailsJsdom::TestCase
     assert_selector "#caption", text: "Holiday"
   end
 
+  test "click_button without a locator clicks the only button within a scope" do
+    visit new_upload_path
+    attach_file "Plain document", "#{FILES}/hello.txt"
+    within("form[data-turbo=false]") { click_button }
+
+    assert_selector "#uploaded li", text: "hello.txt"
+  end
+
+  test "attach_file says to remove make_visible, which rails-jsdom does not need" do
+    visit new_upload_path
+    error = assert_raises(ArgumentError) { attach_file "Document", "#{FILES}/hello.txt", make_visible: true }
+
+    assert_equal "make_visible: does nothing here, because rails-jsdom attaches files to hidden fields too. Remove it.", error.message
+  end
+
   test "attach_file keeps binary content intact" do
     visit new_upload_path
     attach_file "Document", "#{FILES}/bytes.bin"
@@ -67,5 +82,20 @@ class UploadInteractionTest < RailsJsdom::TestCase
 
     assert_selector "#caption", text: "Holiday"
     assert_no_selector "#uploaded li"
+  end
+
+  test "attach_file with a block answers the file chooser that a script opens" do
+    visit new_upload_path
+    attach_file("#{FILES}/hello.txt") { click_on "Choose with a script" }
+
+    assert_selector "#uploaded li", text: "hello.txt text/plain 6"
+    assert_selector "[data-file-picker-target=preview] img[src^='blob:']"
+  end
+
+  test "attach_file with a block raises when the block opens no file chooser" do
+    visit new_upload_path
+    error = assert_raises(RailsJsdom::Error) { attach_file("#{FILES}/hello.txt") { fill_in "Caption", with: "Trip" } }
+
+    assert_equal "No file chooser opened in the attach_file block", error.message
   end
 end
