@@ -24,6 +24,17 @@ module RailsJsdom
   #      `name`, `id` or `aria-label` equals it.
   # 3. **CSS selector.** `click "#checkout"`.
   #
+  # The actions #click, #click_on, #click_link, #click_button, #fill_in,
+  # #check, #uncheck, #choose, #attach_file, #hover, #double_click and
+  # #right_click take the same filters, and their locator is optional for the
+  # ones that find buttons, links or fields:
+  #
+  #   fill_in placeholder: "Search", with: "mugs"
+  #   click_link "Edit", href: edit_project_path(project)
+  #
+  # #check, #uncheck and #choose accept `allow_label_click:` and ignore it:
+  # they set the input directly, even when only its label is visible.
+  #
   # #click_link only matches links, #click_button only buttons, #click_on
   # both; #fill_in only text-like fields; #check and #uncheck only
   # checkboxes; #choose only radio buttons; #attach_file only file fields.
@@ -45,7 +56,10 @@ module RailsJsdom
   # - `disabled:` `false` (the default for fields and buttons), `true`, or
   #   `:all`.
   # - `href:` a link's `href`.
+  # - `placeholder:` a field's `placeholder`.
   # - `type:` an input's type, or the tag name of other fields.
+  # - `wait:` accepted and ignored on every finder, predicate, assertion
+  #   and action, because the page has already settled.
   #
   # Count assertions also take `count:`, or `minimum:` and `maximum:`.
   #
@@ -92,6 +106,14 @@ module RailsJsdom
     # Goes forward one history entry after #go_back.
     def go_forward
       rails_jsdom_perform(command: "traverse", delta: 1)
+    end
+
+    # Yields. Waiting is never needed, so the time is ignored. It exists so
+    # tests written for a browser run unchanged.
+    #
+    #   using_wait_time(10) { assert_text "Saved" }
+    def using_wait_time(_seconds)
+      yield
     end
 
     # Runs the block as another user, with its own cookies and its own page.
@@ -143,30 +165,30 @@ module RailsJsdom
     # page. Turbo links and forms are answered by Rails in-process.
     #
     #   click "dropdown#toggle"
-    def click(locator, match: nil)
-      rails_jsdom_act("click", locator, match)
+    def click(locator, match: nil, **filters)
+      rails_jsdom_act("click", locator, match, filters, strategy: "clickable")
     end
 
     # Clicks the link or button found by `locator`.
     #
     #   click_on "Add to cart"
-    def click_on(locator, match: nil)
-      rails_jsdom_act("click", locator, match, kind: "link_or_button")
+    def click_on(locator = nil, match: nil, **filters)
+      rails_jsdom_act("click", locator, match, filters, strategy: "link_or_button", kind: "link_or_button")
     end
     alias_method :click_link_or_button, :click_on
 
     # Clicks the link found by `locator`.
     #
     #   click_link "Second page"
-    def click_link(locator, match: nil)
-      rails_jsdom_act("click", locator, match, kind: "link")
+    def click_link(locator = nil, match: nil, **filters)
+      rails_jsdom_act("click", locator, match, filters, strategy: "link", kind: "link")
     end
 
     # Clicks the button found by `locator`.
     #
     #   click_button "Save"
-    def click_button(locator, match: nil)
-      rails_jsdom_act("click", locator, match, kind: "button")
+    def click_button(locator = nil, match: nil, **filters)
+      rails_jsdom_act("click", locator, match, filters, strategy: "button", kind: "button")
     end
 
     # Moves the pointer over the element found by `locator`, dispatching
@@ -174,46 +196,46 @@ module RailsJsdom
     # and `mousemove`. CSS `:hover` styles are not applied.
     #
     #   hover "Help"
-    def hover(locator, match: nil)
-      rails_jsdom_act("hover", locator, match)
+    def hover(locator, match: nil, **filters)
+      rails_jsdom_act("hover", locator, match, filters, strategy: "clickable")
     end
 
     # Clicks the element found by `locator` twice, then dispatches `dblclick`.
-    def double_click(locator, match: nil)
-      rails_jsdom_act("double_click", locator, match)
+    def double_click(locator, match: nil, **filters)
+      rails_jsdom_act("double_click", locator, match, filters, strategy: "clickable")
     end
 
     # Dispatches a right-button `mousedown`, `mouseup` and `contextmenu` on the
     # element found by `locator`.
-    def right_click(locator, match: nil)
-      rails_jsdom_act("right_click", locator, match)
+    def right_click(locator, match: nil, **filters)
+      rails_jsdom_act("right_click", locator, match, filters, strategy: "clickable")
     end
 
     # Sets the value of the text-like field found by `locator`, dispatches
     # `input` and `change`, and settles the page.
     #
     #   fill_in "Quantity", with: 2
-    def fill_in(locator, with:, match: nil)
-      rails_jsdom_act("fill_in", locator, match, with: with.to_s)
+    def fill_in(locator = nil, with:, match: nil, **filters)
+      rails_jsdom_act("fill_in", locator, match, filters, strategy: "field", with: with.to_s)
     end
 
     # Checks the checkbox found by `locator`, unless it is already checked.
     #
     #   check "Remember me"
-    def check(locator, match: nil)
-      rails_jsdom_act("check", locator, match, checked: true)
+    def check(locator = nil, match: nil, **filters)
+      rails_jsdom_act("check", locator, match, filters, strategy: "field", checked: true)
     end
 
     # Unchecks the checkbox found by `locator`, unless it is already unchecked.
-    def uncheck(locator, match: nil)
-      rails_jsdom_act("check", locator, match, checked: false)
+    def uncheck(locator = nil, match: nil, **filters)
+      rails_jsdom_act("check", locator, match, filters, strategy: "field", checked: false)
     end
 
     # Selects the radio button found by `locator`.
     #
     #   choose "Monthly"
-    def choose(locator, match: nil)
-      rails_jsdom_act("choose", locator, match)
+    def choose(locator = nil, match: nil, **filters)
+      rails_jsdom_act("choose", locator, match, filters, strategy: "field")
     end
 
     # Selects the option whose text equals, or else contains, `value`, in the
@@ -221,14 +243,16 @@ module RailsJsdom
     # left out. Dispatches `input` and `change`.
     #
     #   select "Canada", from: "Country"
-    def select(value, from: nil, match: nil)
+    def select(value, from: nil, match: nil, **options)
+      rails_jsdom_options(options)
       rails_jsdom_perform(command: "select", option: value.to_s, from: from, selected: true, scope: rails_jsdom_scope, match: match)
     end
 
     # Deselects the option `value` in a select that allows multiple options.
     #
     #   unselect "Red", from: "Colours"
-    def unselect(value, from: nil, match: nil)
+    def unselect(value, from: nil, match: nil, **options)
+      rails_jsdom_options(options)
       rails_jsdom_perform(command: "select", option: value.to_s, from: from, selected: false, scope: rails_jsdom_scope, match: match)
     end
 
@@ -239,9 +263,9 @@ module RailsJsdom
     # `ActionDispatch::Http::UploadedFile` params.
     #
     #   attach_file "Avatar", file_fixture("avatar.png")
-    def attach_file(locator, paths, match: nil)
+    def attach_file(locator, paths, match: nil, **filters)
       files = Array(paths).map { |path| { name: File.basename(path), type: Rack::Mime.mime_type(File.extname(path.to_s)), base64: [ File.binread(path) ].pack("m0") } }
-      rails_jsdom_act("attach", locator, match, files: files)
+      rails_jsdom_act("attach", locator, match, filters, strategy: "field", files: files)
     end
 
     # Types `keys` into the focused element. A String types its characters; a
@@ -266,24 +290,27 @@ module RailsJsdom
     end
 
     # Scopes every action, finder and assertion in the block to the one
-    # element that matches the CSS `selector`, or to an element from #find.
+    # element that matches the CSS `selector` and the filters, or to an
+    # element from #find.
     #
     #   within "#cart" do
     #     click_on "Remove"
     #     assert_no_text "Mug"
     #   end
-    def within(selector, &block)
-      rails_jsdom_within(selector.is_a?(Element) ? { handle: selector.handle } : { css: selector }, &block)
+    def within(selector, **filters, &block)
+      rails_jsdom_within(rails_jsdom_scope_entry(selector, filters), &block)
     end
 
     # Like #within, for the `fieldset` whose `id` or `legend` text is
     # `locator`.
-    def within_fieldset(locator, &block)
+    def within_fieldset(locator, **options, &block)
+      rails_jsdom_options(options)
       rails_jsdom_within({ fieldset: locator }, &block)
     end
 
     # Like #within, for the `table` whose `id` or `caption` text is `locator`.
-    def within_table(locator, &block)
+    def within_table(locator, **options, &block)
+      rails_jsdom_options(options)
       rails_jsdom_within({ table: locator }, &block)
     end
 
@@ -293,7 +320,7 @@ module RailsJsdom
     #
     #   find(".cart-item", text: "Mug").click
     def find(selector, match: nil, **filters)
-      rails_jsdom_find(Query.new("css", selector, **filters), match)
+      rails_jsdom_find(rails_jsdom_query("css", selector, filters), match)
     end
 
     # The one field found by `locator` (see Locators) that matches the
@@ -301,17 +328,17 @@ module RailsJsdom
     #
     #   find_field("Quantity", with: "2")
     def find_field(locator = nil, match: nil, **filters)
-      rails_jsdom_find(Query.new("field", locator, **filters), match)
+      rails_jsdom_find(rails_jsdom_query("field", locator, filters), match)
     end
 
     # The one button found by `locator` that matches the filters.
     def find_button(locator = nil, match: nil, **filters)
-      rails_jsdom_find(Query.new("button", locator, **filters), match)
+      rails_jsdom_find(rails_jsdom_query("button", locator, filters), match)
     end
 
     # The one link found by `locator` that matches the filters.
     def find_link(locator = nil, match: nil, **filters)
-      rails_jsdom_find(Query.new("link", locator, **filters), match)
+      rails_jsdom_find(rails_jsdom_query("link", locator, filters), match)
     end
 
     # Every element that matches the CSS `selector` and the filters, possibly
@@ -319,13 +346,13 @@ module RailsJsdom
     #
     #   all(".cart-item").map(&:text)
     def all(selector, **filters)
-      rails_jsdom_elements(Query.new("css", selector, **filters))
+      rails_jsdom_elements(rails_jsdom_query("css", selector, filters))
     end
 
     # The first element that matches the CSS `selector` and the filters.
     # Raises RailsJsdom::Error when none matches.
     def first(selector, **filters)
-      rails_jsdom_find(Query.new("css", selector, **filters), :first)
+      rails_jsdom_find(rails_jsdom_query("css", selector, filters), :first)
     end
 
     # Runs `script` in the page, settles it and returns the script's value,
@@ -407,20 +434,22 @@ module RailsJsdom
 
     # Whether the visible text includes `text`, or matches it when it is a
     # Regexp.
-    def has_text?(text)
+    def has_text?(text, **options)
+      rails_jsdom_options(options)
       Query.like?(page_text, text)
     end
     alias_method :has_content?, :has_text?
 
     # Whether the visible text does not include `text`.
-    def has_no_text?(text)
-      !has_text?(text)
+    def has_no_text?(text, **options)
+      !has_text?(text, **options)
     end
     alias_method :has_no_content?, :has_no_text?
 
     # Whether the current path matches `path`, as #assert_current_path
     # compares it.
-    def has_current_path?(path, ignore_query: false, url: false)
+    def has_current_path?(path, ignore_query: false, url: false, **options)
+      rails_jsdom_options(options)
       Query.same?(rails_jsdom_current(ignore_query, url), path)
     end
 
@@ -431,36 +460,37 @@ module RailsJsdom
 
     # Whether the page title includes `title`, or matches it when it is a
     # Regexp.
-    def has_title?(title)
+    def has_title?(title, **options)
+      rails_jsdom_options(options)
       Query.like?(rails_jsdom_snapshot.fetch("title"), title)
     end
 
     # Whether the page title does not include `title`.
-    def has_no_title?(title)
-      !has_title?(title)
+    def has_no_title?(title, **options)
+      !has_title?(title, **options)
     end
 
     # Whether elements match the CSS `selector` and the filters: at least one,
     # exactly `count:`, or between `minimum:` and `maximum:`.
     def has_selector?(selector, count: nil, minimum: nil, maximum: nil, **filters)
-      rails_jsdom_counted?(Query.new("css", selector, **filters), count, minimum, maximum)
+      rails_jsdom_counted?(rails_jsdom_query("css", selector, filters), count, minimum, maximum)
     end
     alias_method :has_css?, :has_selector?
 
     # Whether no element matches the CSS `selector` and the filters.
     def has_no_selector?(selector, **filters)
-      rails_jsdom_matches(Query.new("css", selector, **filters)).empty?
+      rails_jsdom_matches(rails_jsdom_query("css", selector, filters)).empty?
     end
     alias_method :has_no_css?, :has_no_selector?
 
     # Whether a field found by `locator` matches the filters.
     def has_field?(locator = nil, count: nil, minimum: nil, maximum: nil, **filters)
-      rails_jsdom_counted?(Query.new("field", locator, **filters), count, minimum, maximum)
+      rails_jsdom_counted?(rails_jsdom_query("field", locator, filters), count, minimum, maximum)
     end
 
     # Whether no field found by `locator` matches the filters.
     def has_no_field?(locator = nil, **filters)
-      rails_jsdom_matches(Query.new("field", locator, **filters)).empty?
+      rails_jsdom_matches(rails_jsdom_query("field", locator, filters)).empty?
     end
 
     # Whether a checked checkbox or radio button is found by `locator`.
@@ -475,33 +505,33 @@ module RailsJsdom
 
     # Whether a button found by `locator` matches the filters.
     def has_button?(locator = nil, count: nil, minimum: nil, maximum: nil, **filters)
-      rails_jsdom_counted?(Query.new("button", locator, **filters), count, minimum, maximum)
+      rails_jsdom_counted?(rails_jsdom_query("button", locator, filters), count, minimum, maximum)
     end
 
     # Whether no button found by `locator` matches the filters.
     def has_no_button?(locator = nil, **filters)
-      rails_jsdom_matches(Query.new("button", locator, **filters)).empty?
+      rails_jsdom_matches(rails_jsdom_query("button", locator, filters)).empty?
     end
 
     # Whether a link found by `locator` matches the filters.
     def has_link?(locator = nil, count: nil, minimum: nil, maximum: nil, **filters)
-      rails_jsdom_counted?(Query.new("link", locator, **filters), count, minimum, maximum)
+      rails_jsdom_counted?(rails_jsdom_query("link", locator, filters), count, minimum, maximum)
     end
 
     # Whether no link found by `locator` matches the filters.
     def has_no_link?(locator = nil, **filters)
-      rails_jsdom_matches(Query.new("link", locator, **filters)).empty?
+      rails_jsdom_matches(rails_jsdom_query("link", locator, filters)).empty?
     end
 
     # Asserts that the visible text includes `text`, or matches it when it is
     # a Regexp.
-    def assert_text(text)
-      assert has_text?(text), "Expected the page text to include #{text.inspect}"
+    def assert_text(text, **options)
+      assert has_text?(text, **options), "Expected the page text to include #{text.inspect}"
     end
 
     # Asserts that the visible text does not include `text`.
-    def assert_no_text(text)
-      assert has_no_text?(text), "Expected the page text not to include #{text.inspect}"
+    def assert_no_text(text, **options)
+      assert has_no_text?(text, **options), "Expected the page text not to include #{text.inspect}"
     end
     alias_method :refute_text, :assert_no_text
 
@@ -510,26 +540,28 @@ module RailsJsdom
     # `url: true` to compare the whole URL.
     #
     #   assert_current_path project_path(project)
-    def assert_current_path(path, ignore_query: false, url: false)
+    def assert_current_path(path, ignore_query: false, url: false, **options)
+      rails_jsdom_options(options)
       actual = rails_jsdom_current(ignore_query, url)
       assert Query.same?(actual, path), "Expected the current path to be #{path.inspect}, but it was #{actual.inspect}"
     end
 
     # Asserts that the current path does not match `path`.
-    def assert_no_current_path(path, ignore_query: false, url: false)
+    def assert_no_current_path(path, ignore_query: false, url: false, **options)
+      rails_jsdom_options(options)
       actual = rails_jsdom_current(ignore_query, url)
       assert_not Query.same?(actual, path), "Expected the current path not to be #{path.inspect}"
     end
 
     # Asserts that the page title includes `title`, or matches it when it is a
     # Regexp.
-    def assert_title(title)
-      assert has_title?(title), "Expected the title to include #{title.inspect}, but it was #{rails_jsdom_snapshot.fetch("title").inspect}"
+    def assert_title(title, **options)
+      assert has_title?(title, **options), "Expected the title to include #{title.inspect}, but it was #{rails_jsdom_snapshot.fetch("title").inspect}"
     end
 
     # Asserts that the page title does not include `title`.
-    def assert_no_title(title)
-      assert has_no_title?(title), "Expected the title not to include #{title.inspect}"
+    def assert_no_title(title, **options)
+      assert has_no_title?(title, **options), "Expected the title not to include #{title.inspect}"
     end
 
     # Asserts that elements match the CSS `selector` and the filters: at least
@@ -539,13 +571,13 @@ module RailsJsdom
     #   assert_selector ".cart-item", count: 2
     #   assert_selector "li", text: "Mug"
     def assert_selector(selector, count: nil, minimum: nil, maximum: nil, **filters)
-      rails_jsdom_assert_count(Query.new("css", selector, **filters), count, minimum, maximum)
+      rails_jsdom_assert_count(rails_jsdom_query("css", selector, filters), count, minimum, maximum)
     end
     alias_method :assert_css, :assert_selector
 
     # Asserts that no element matches the CSS `selector` and the filters.
     def assert_no_selector(selector, **filters)
-      rails_jsdom_assert_none(Query.new("css", selector, **filters))
+      rails_jsdom_assert_none(rails_jsdom_query("css", selector, filters))
     end
     alias_method :refute_selector, :assert_no_selector
     alias_method :assert_no_css, :assert_no_selector
@@ -554,12 +586,12 @@ module RailsJsdom
     #
     #   assert_field "Quantity", with: "2"
     def assert_field(locator = nil, count: nil, minimum: nil, maximum: nil, **filters)
-      rails_jsdom_assert_count(Query.new("field", locator, **filters), count, minimum, maximum)
+      rails_jsdom_assert_count(rails_jsdom_query("field", locator, filters), count, minimum, maximum)
     end
 
     # Asserts that no field found by `locator` matches the filters.
     def assert_no_field(locator = nil, **filters)
-      rails_jsdom_assert_none(Query.new("field", locator, **filters))
+      rails_jsdom_assert_none(rails_jsdom_query("field", locator, filters))
     end
 
     # Asserts that the checkbox or radio button found by `locator` is checked.
@@ -576,24 +608,24 @@ module RailsJsdom
     # Asserts that a button found by `locator` matches the filters. Disabled
     # buttons only match with `disabled: true` or `disabled: :all`.
     def assert_button(locator = nil, count: nil, minimum: nil, maximum: nil, **filters)
-      rails_jsdom_assert_count(Query.new("button", locator, **filters), count, minimum, maximum)
+      rails_jsdom_assert_count(rails_jsdom_query("button", locator, filters), count, minimum, maximum)
     end
 
     # Asserts that no button found by `locator` matches the filters.
     def assert_no_button(locator = nil, **filters)
-      rails_jsdom_assert_none(Query.new("button", locator, **filters))
+      rails_jsdom_assert_none(rails_jsdom_query("button", locator, filters))
     end
 
     # Asserts that a link found by `locator` matches the filters.
     #
     #   assert_link "Second page", href: "/second"
     def assert_link(locator = nil, count: nil, minimum: nil, maximum: nil, **filters)
-      rails_jsdom_assert_count(Query.new("link", locator, **filters), count, minimum, maximum)
+      rails_jsdom_assert_count(rails_jsdom_query("link", locator, filters), count, minimum, maximum)
     end
 
     # Asserts that no link found by `locator` matches the filters.
     def assert_no_link(locator = nil, **filters)
-      rails_jsdom_assert_none(Query.new("link", locator, **filters))
+      rails_jsdom_assert_none(rails_jsdom_query("link", locator, filters))
     end
 
     # The root of the live page's DOM, or the current #within element. Rails
@@ -606,6 +638,10 @@ module RailsJsdom
 
     def rails_jsdom_element(handle, action, **options) # :nodoc:
       rails_jsdom_perform(command: "element", handle: handle, action: action, **options)
+    end
+
+    def rails_jsdom_ancestor(element, selector, filters) # :nodoc:
+      within(element) { rails_jsdom_find(rails_jsdom_query("ancestor", selector, filters), :first) }
     end
 
     def rails_jsdom_read(handle) # :nodoc:
@@ -649,8 +685,28 @@ module RailsJsdom
       rails_jsdom_scope.pop
     end
 
-    def rails_jsdom_act(command, locator, match, **options)
-      rails_jsdom_perform(command: command, locator: locator, scope: rails_jsdom_scope, match: match, **options)
+    def rails_jsdom_act(command, locator, match, filters, strategy:, **options)
+      filters = filters.except(:wait, :allow_label_click)
+      target = locator.nil? || filters.any? ? { handle: rails_jsdom_target(strategy, locator, filters, match).handle } : { locator: locator, scope: rails_jsdom_scope, match: match }
+      rails_jsdom_perform(command: command, **target, **options)
+    end
+
+    def rails_jsdom_target(strategy, locator, filters, match)
+      rails_jsdom_find(rails_jsdom_query(strategy, locator, filters), match)
+    end
+
+    def rails_jsdom_options(options)
+      unknown = options.keys - [ :wait ]
+      raise ArgumentError, "unknown keywords: #{unknown.join(", ")}" if unknown.any?
+    end
+
+    def rails_jsdom_query(strategy, locator, filters)
+      Query.new(strategy, locator, **filters.except(:wait))
+    end
+
+    def rails_jsdom_scope_entry(selector, filters)
+      selector = find(selector, **filters) if selector.is_a?(String) && filters.except(:wait).any?
+      selector.is_a?(Element) ? { handle: selector.handle } : { css: selector }
     end
 
     def rails_jsdom_modal(type, accept, text, with: nil)

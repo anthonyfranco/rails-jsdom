@@ -159,6 +159,110 @@ module RailsJsdom
     # Like TestHelper#has_no_selector?, inside this element.
     scoped_helper :has_no_selector?
 
+    ##
+    # Like TestHelper#fill_in, inside this element.
+    scoped_helper :fill_in
+
+    ##
+    # Like TestHelper#click_on, inside this element.
+    scoped_helper :click_on
+
+    ##
+    # Like TestHelper#click_link, inside this element.
+    scoped_helper :click_link
+
+    ##
+    # Like TestHelper#click_button, inside this element.
+    scoped_helper :click_button
+
+    ##
+    # Like TestHelper#check, inside this element.
+    scoped_helper :check
+
+    ##
+    # Like TestHelper#uncheck, inside this element.
+    scoped_helper :uncheck
+
+    ##
+    # Like TestHelper#choose, inside this element.
+    scoped_helper :choose
+
+    ##
+    # Like TestHelper#select, inside this element.
+    scoped_helper :select
+
+    ##
+    # Like TestHelper#unselect, inside this element.
+    scoped_helper :unselect
+
+    ##
+    # Like TestHelper#attach_file, inside this element.
+    scoped_helper :attach_file
+
+    ##
+    # Like TestHelper#assert_field, inside this element.
+    scoped_helper :assert_field
+
+    ##
+    # Like TestHelper#assert_no_field, inside this element.
+    scoped_helper :assert_no_field
+
+    ##
+    # Like TestHelper#assert_button, inside this element.
+    scoped_helper :assert_button
+
+    ##
+    # Like TestHelper#assert_no_button, inside this element.
+    scoped_helper :assert_no_button
+
+    ##
+    # Like TestHelper#assert_link, inside this element.
+    scoped_helper :assert_link
+
+    ##
+    # Like TestHelper#assert_no_link, inside this element.
+    scoped_helper :assert_no_link
+
+    ##
+    # Like TestHelper#has_field?, inside this element.
+    scoped_helper :has_field?
+
+    ##
+    # Like TestHelper#has_no_field?, inside this element.
+    scoped_helper :has_no_field?
+
+    ##
+    # Like TestHelper#has_button?, inside this element.
+    scoped_helper :has_button?
+
+    ##
+    # Like TestHelper#has_no_button?, inside this element.
+    scoped_helper :has_no_button?
+
+    ##
+    # Like TestHelper#has_link?, inside this element.
+    scoped_helper :has_link?
+
+    ##
+    # Like TestHelper#has_no_link?, inside this element.
+    scoped_helper :has_no_link?
+
+    ##
+    # Like TestHelper#has_css?, inside this element.
+    scoped_helper :has_css?
+
+    ##
+    # Like TestHelper#has_no_css?, inside this element.
+    scoped_helper :has_no_css?
+
+    # The nearest ancestor of the element that matches the CSS `selector` and
+    # the filters. Raises RailsJsdom::Error when none matches.
+    #
+    #   find_field("Quantity").ancestor("li").click
+    def ancestor(selector, **filters)
+      @test.rails_jsdom_ancestor(self, selector, filters)
+    end
+
     # Two elements are equal when they refer to the same node.
     def ==(other)
       other.is_a?(Element) && other.handle == handle

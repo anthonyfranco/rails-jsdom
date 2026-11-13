@@ -49,7 +49,7 @@ Reads answer at once and do not change the page.
 | --- | --- | --- |
 | `setup` | `root`, `controllers`, `modules`, `stubs`, `directories`, `horizon`, `hidden` | `{}` once the Stimulus bundle is built. Sent once, first. See [Setup](#setup). |
 | `snapshot` | *scope* | `{ html, text, url, title }`: the HTML and visible text of the page or scope, and the page's URL and title |
-| `query` | `strategy` (`"css"`, `"field"`, `"button"` or `"link"`), `locator` (or `null` for every element of that kind), *scope* | An array of [element descriptions](#element-descriptions) |
+| `query` | `strategy` (`"css"`, `"field"`, `"button"`, `"link"`, `"link_or_button"`, `"clickable"` or `"ancestor"`), `locator` (or `null` for every element of that kind), *scope* | An array of [element descriptions](#element-descriptions). With `"ancestor"`, the locator is a CSS selector and the answer is the ancestors of the scope's element that match it, nearest first. |
 | `read` | `handle` | One element description |
 | `streams` | none | The signed stream names of the page's `<turbo-cable-stream-source>` elements for Turbo's channel |
 | `stub_fetch` | `url` (full URL, or path and query), `response` | `null`. Later page requests to that URL get `response` without asking Rails, until the next `load`. |
@@ -99,6 +99,7 @@ An action fails if the page threw an error, rejected a promise, showed an unexpe
 ## Finding elements
 
 - **locator:** tried as a Stimulus action (`"menu#open"`), then as text (button and link text, or a field's label, placeholder, `name`, `id` or `aria-label`), then as a CSS selector. The first that matches anything wins.
+- **handle:** an action that carries a `handle` acts on that element and skips the search. It fails when the element does not fit the action, such as `fill_in` on a checkbox.
 - **match:** `"first"` picks the first of several matches. Otherwise several matches fail the command.
 - **scope:** an array of entries applied in turn. Each entry must match exactly one element:
   - `{ "css": "#cart" }`

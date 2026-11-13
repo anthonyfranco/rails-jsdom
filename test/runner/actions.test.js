@@ -277,3 +277,38 @@ test("an unknown element action fails", async () => {
 
   await assert.rejects(element(await handleOf("p"), "squeeze"), /unknown element action squeeze/)
 })
+
+test("an action with a handle acts on that element without searching, and refuses one of the wrong kind", async () => {
+  await runner.load(`<input id="a"><input type="checkbox" id="b"><button onclick="window.hit = true">Go</button>`)
+  await act("fill_in", null, { handle: await handleOf("#a"), with: "mugs" })
+  await act("click", null, { handle: await handleOf("button"), kind: "button" })
+
+  assert.equal(await read(`document.querySelector("#a").value`), "mugs")
+  assert.equal(await read("hit"), true)
+  await assert.rejects(act("fill_in", null, { handle: await handleOf("#b"), with: "x" }), /<input type="checkbox" id="b"> does not fit this action/)
+})
+
+test("an ancestor query lists the matching ancestors of the scoped element, nearest first", async () => {
+  await runner.load(`<section id="s"><div id="d"><p id="p"><b id="leaf">x</b></p></div></section>`)
+  const scope = [{ handle: await handleOf("#leaf") }]
+  const found = await query("ancestor", "div, section", scope)
+
+  assert.deepEqual(found.map(entry => entry.attributes.id), ["d", "s"])
+  assert.deepEqual(await query("ancestor", "table", scope), [])
+})
+
+test("a link_or_button query and a clickable query find their kinds by text", async () => {
+  await runner.load(`<a href="/x">Open</a><button>Open</button><span role="button">Open</span><label>Open</label>`)
+
+  assert.deepEqual((await query("link_or_button", "Open")).map(entry => entry.tag), ["a", "button"])
+  assert.equal((await query("clickable", "Open")).length, 4)
+})
+
+test("check and choose find an input that only its label shows, even when the input is hidden", async () => {
+  await runner.load(`<input type="checkbox" id="c" hidden><label for="c">Remember</label><input type="radio" id="r" hidden><label for="r">Large</label>`)
+  await act("check", "Remember", { checked: true })
+  await act("choose", "Large")
+
+  assert.equal(await read(`document.querySelector("#c").checked`), true)
+  assert.equal(await read(`document.querySelector("#r").checked`), true)
+})

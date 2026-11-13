@@ -12,12 +12,12 @@ module RailsJsdom
       expected.is_a?(Regexp) ? actual.match?(expected) : actual == expected.to_s
     end
 
-    def initialize(strategy, locator, text: nil, exact_text: nil, visible: true, with: nil, checked: nil, unchecked: nil, disabled: nil, href: nil, type: nil)
+    def initialize(strategy, locator, text: nil, exact_text: nil, visible: true, with: nil, checked: nil, unchecked: nil, disabled: nil, href: nil, placeholder: nil, type: nil)
       @strategy = strategy
       @locator = locator
       @visible = visible
       disabled = false if disabled.nil? && DISABLED_BY_DEFAULT.include?(strategy)
-      @filters = { text: text, exact_text: exact_text, with: with, checked: checked, unchecked: unchecked, disabled: disabled, href: href, type: type }.compact
+      @filters = { text: text, exact_text: exact_text, with: with, checked: checked, unchecked: unchecked, disabled: disabled, href: href, placeholder: placeholder, type: type }.compact
     end
 
     def message
@@ -68,9 +68,12 @@ module RailsJsdom
         checked: descriptor.fetch("checked"),
         unchecked: !descriptor.fetch("checked"),
         disabled: descriptor.fetch("disabled"),
-        href: descriptor.fetch("attributes")["href"].to_s,
         type: descriptor.fetch("type")
-      }
+      }.merge(attribute_values(descriptor.fetch("attributes")))
+    end
+
+    def attribute_values(attributes)
+      { href: attributes["href"].to_s, placeholder: attributes["placeholder"].to_s }
     end
   end
 end
